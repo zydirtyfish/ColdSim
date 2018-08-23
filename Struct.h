@@ -11,6 +11,10 @@ using namespace std;
 #define BLOCKSIZE 2048 /*1MB, 2048sectors*/
 #endif
 
+#ifndef EXPIREDAY
+#define EXPIREDAY 7
+#endif
+
 #ifndef STARTTIME
 #define STARTTIME 1514736000 /*2018-01-01 00:00:00*/
 #endif
@@ -58,12 +62,16 @@ private:
     /*Index Map for TOT*/
     unordered_map<string, unordered_map<u_int64_t,long> > index_map;
 
+    long currentday;
+    long lastday;
+
 public:
 
     MemStruct()
     {
         unordered_map<long, unordered_map<string, unordered_map<u_int64_t, struct BlockInfo *> > > TOT = unordered_map<long, unordered_map<string, unordered_map<u_int64_t, struct BlockInfo *> > >();
         unordered_map<string, unordered_map<u_int64_t, long> > index_map = unordered_map<string, unordered_map<u_int64_t, long> >();
+        currentday = lastday = 0;
     }
 
     long hasBlock(struct BlockStruct *bs)
@@ -126,10 +134,10 @@ public:
 
     void updateTOT(struct BlockStruct *bs)
     {
-        long day = hasBlock(bs);
-        if(day == 0)
+        long hourtmp = hasBlock(bs);
+        if(hourtmp == 0)
         {/*this block is not exist in the TOT*/
-
+            long hour = (bs->alloc_time - STARTTIME) / 3600;
         }
         else
         {
@@ -137,6 +145,29 @@ public:
         }
         
     }
+
+    void test()
+    {
+
+    }
+
+    bool isExpired(struct IoRecord *ir)
+    {/*判断是否需要清理过期数据*/
+        long daydiff = (ir->alloc_time - lastday) / 86400;
+        if(daydiff > EXPIREDAY)
+        {
+            return true;
+        }
+        else return false;
+    }
+
+    void rmExpiredData()
+    {
+        auto it = TOT.find(lastday);
+        
+        lastday++;
+    }
+
 };
 #endif
 
