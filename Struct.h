@@ -58,9 +58,9 @@ class MemStruct
 {
 private:
     /*Time Oriented Table, i.e. TOT*/
-    unordered_map<long,unordered_map<string,unordered_map<u_int64_t,struct BlockInfo*> > > TOT;
+    unordered_map<long,unordered_map<string,unordered_map<u_int64_t,struct BlockInfo * > * > * > *TOT;
     /*Index Map for TOT*/
-    unordered_map<string, unordered_map<u_int64_t,long> > index_map;
+    unordered_map<string, unordered_map<u_int64_t,long> *> *index_map;
 
     long currentday;
     long lastday;
@@ -69,15 +69,15 @@ public:
 
     MemStruct()
     {
-        unordered_map<long, unordered_map<string, unordered_map<u_int64_t, struct BlockInfo *> > > TOT = unordered_map<long, unordered_map<string, unordered_map<u_int64_t, struct BlockInfo *> > >();
-        unordered_map<string, unordered_map<u_int64_t, long> > index_map = unordered_map<string, unordered_map<u_int64_t, long> >();
+        unordered_map<long, unordered_map<string, unordered_map<u_int64_t, struct BlockInfo *>* >* > *TOT = new unordered_map<long, unordered_map<string, unordered_map<u_int64_t, struct BlockInfo *>* >* >();
+        unordered_map<string, unordered_map<u_int64_t, long>* > *index_map = new unordered_map<string, unordered_map<u_int64_t, long> *>();
         currentday = lastday = 0;
     }
 
     long hasBlock(struct BlockStruct *bs)
-    {/*to judge whether the block is in the TOT*/
-        auto it = index_map.find(bs->disksn);
-        if(it != index_map.end())
+    {/*to judge whether the block is in the TOT*/ 
+        auto it = (*index_map).find(bs->disksn);
+        if(it != (*index_map).end())
         {
             unordered_map<u_int64_t,long> *tmp = &(it->second);
             auto it2= (*tmp).find(bs->blockid);
@@ -163,11 +163,28 @@ public:
 
     void rmExpiredData()
     {
-        auto it = TOT.find(lastday);
-        
+        auto it = (*TOT).find(lastday);
+        /*remove expired data*/
+        unordered_map<string,unordered_map<u_int64_t, struct BlockInfo *> *> *diskmap = it->second;
+        for(auto it2 = (*diskmap).begin() ; it2 != (*diskmap).end() ; it2++)
+        {
+            unordered_map<u_int64_t,struct BlockInfo *> *blockmap = it2->second;
+            for(auto it3 = (*blockmap).begin() ; it3 != (*blockmap).end() ; it3++)
+            {
+                struct BlockInfo *bio = it3->second;
+                free(bio);
+                it3->second = NULL;
+                (*blockmap).erase(it3);
+            }
+            delete blockmap;
+            it2->second = NULL;
+            (*diskmap).erase(it2);
+        }
+        delete diskmap;
+        it->second = NULL;
+        (*TOT).erase(it);
         lastday++;
     }
 
 };
 #endif
-
