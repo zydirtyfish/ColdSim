@@ -23,7 +23,15 @@ using namespace std;
 #define BLOCKINFO
 struct BlockInfo
 {
-    u_int64_t readcnt;
+    long TOT_pos;            /*在TOT中的位置*/
+    long read_timestamp;
+    long write_timestamp;
+    u_int64_t writesize;
+    u_int64_t readsize;
+    u_int64_t read_freq;
+    u_int64_t write_freq;
+    struct BlockInfo *next;
+    struct BlockInfo *pre;
 };
 #endif
 
@@ -58,7 +66,7 @@ class MemStruct
 {
 private:
     /*Time Oriented Table, i.e. TOT*/
-    unordered_map<long,unordered_map<string,unordered_map<u_int64_t,struct BlockInfo * > * > * > *TOT;
+    unordered_map<long,struct BlockInfo *> *TOT;
     /*Index Map for TOT*/
     unordered_map<string, unordered_map<u_int64_t,long> *> *index_map;
 
@@ -69,8 +77,8 @@ public:
 
     MemStruct()
     {
-        unordered_map<long, unordered_map<string, unordered_map<u_int64_t, struct BlockInfo *>* >* > *TOT = new unordered_map<long, unordered_map<string, unordered_map<u_int64_t, struct BlockInfo *>* >* >();
-        unordered_map<string, unordered_map<u_int64_t, long>* > *index_map = new unordered_map<string, unordered_map<u_int64_t, long> *>();
+        unordered_map<long, struct BlockInfo *> *TOT = new unordered_map<long, struct BlockInfo *>();
+        unordered_map<string, unordered_map<u_int64_t, struct BlockInfo *>* > *index_map = new unordered_map<string, unordered_map<u_int64_t, struct BlockInfo *> *>();
         currentday = lastday = 0;
     }
 
@@ -138,6 +146,9 @@ public:
         if(hourtmp == 0)
         {/*this block is not exist in the TOT*/
             long hour = (bs->alloc_time - STARTTIME) / 3600;
+            BlockInfo *bio = new BlockInfo;
+
+
         }
         else
         {
@@ -163,28 +174,51 @@ public:
 
     void rmExpiredData()
     {
-        auto it = (*TOT).find(lastday);
         /*remove expired data*/
-        unordered_map<string,unordered_map<u_int64_t, struct BlockInfo *> *> *diskmap = it->second;
-        for(auto it2 = (*diskmap).begin() ; it2 != (*diskmap).end() ; it2++)
+        auto it = (*TOT).find(lastday);
+        struct BlockInfo *bio = it->second;
+        struct BlockInfo *biotmp;
+        while(bio != NULL)
         {
-            unordered_map<u_int64_t,struct BlockInfo *> *blockmap = it2->second;
-            for(auto it3 = (*blockmap).begin() ; it3 != (*blockmap).end() ; it3++)
-            {
-                struct BlockInfo *bio = it3->second;
-                free(bio);
-                it3->second = NULL;
-                (*blockmap).erase(it3);
-            }
-            delete blockmap;
-            it2->second = NULL;
-            (*diskmap).erase(it2);
+            biotmp = bio;
+            bio = bio->next;
+            //delete biotmp;
+            biotmp->pre = biotmp->next = NULL;
+            biotmp->TOT_pos = -1;
         }
-        delete diskmap;
         it->second = NULL;
         (*TOT).erase(it);
         lastday++;
     }
 
+    u_int64_t getToTSize()
+    {
+        u_int64_t result = 0;
+        for(auto it = (*TOT).begin() ; it != (*TOT).end() ; it++)
+        {
+            struct BlockInfo *bio = it->second;
+            while(bio != NULL)
+            {
+                bio = bio->next;
+                result++;
+            }
+        }
+        return result;
+    }
+
+    u_int64_t getTOTSize(long time)
+    {
+        u_int64_t result = 0;
+        auto it = (*TOT).find(time);
+        struct BlockInfo *bio = it->second;
+        while (bio != NULL)
+        {
+            bio = bio->next;
+            result++;
+        }
+        return result;
+    }
+
+    
 };
 #endif
