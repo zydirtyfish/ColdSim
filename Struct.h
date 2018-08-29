@@ -49,6 +49,14 @@ struct BlockStruct
 };
 #endif
 
+#ifndef TOTSTRUCT
+#define TOTSTRUCT
+struct TOTStruct
+{
+    struct BlockInfo *head;
+};
+#endif
+
 #ifndef RECORD
 #define RECORD
 struct IoRecord
@@ -67,9 +75,9 @@ class MemStruct
 {
 private:
     /*Time Oriented Table, i.e. TOT*/
-    unordered_map<long,struct BlockInfo *> *TOT;
+    unordered_map<long,struct TOTStruct *> TOT;
     /*Index Map for TOT*/
-    unordered_map<string, unordered_map<u_int64_t,struct BlockInfo *> *> *index_map;
+    unordered_map<string, unordered_map<u_int64_t,struct BlockInfo *> *> index_map;
 
     long lasthour,hishour;
 
@@ -77,8 +85,8 @@ public:
 
     MemStruct()
     {
-        unordered_map<long, struct BlockInfo *> *TOT = new unordered_map<long, struct BlockInfo *>();
-        unordered_map<string, unordered_map<u_int64_t, struct BlockInfo *>* > *index_map = new unordered_map<string, unordered_map<u_int64_t, struct BlockInfo *> *>();
+        unordered_map<long, struct TOTStruct *> TOT = unordered_map<long, struct TOTStruct *>();
+        unordered_map<string, unordered_map<u_int64_t, struct BlockInfo *>* > index_map = unordered_map<string, unordered_map<u_int64_t, struct BlockInfo *> *>();
         hishour = lasthour = 0;
     }
 
@@ -131,15 +139,14 @@ public:
 
     void updateTOT(struct BlockStruct *bs)
     {
-        long hourtmp = hasBlock(bs);
         long hour = (bs->alloc_time - STARTTIME) / 3600;
-
-        auto it1 = index_map->find(bs->disksn);
+        string a = bs->disksn;
+        unordered_map<string,unordered_map<u_int64_t, struct BlockInfo*>*>::iterator it1 = index_map.find(a);
         struct BlockInfo *bio1 = NULL;
-        if (it1 != index_map->end())
+        if (it1 != index_map.end())
         {
-            unordered_map<u_int64_t, long> *tmp = it1->second;
-            auto it2 = tmp->find(bs->blockid);
+            unordered_map<u_int64_t, struct BlockInfo *> *tmp = it1->second;
+            unordered_map<u_int64_t, struct BlockInfo *>::iterator it2 = tmp->find(bs->blockid);
             if (it2 != tmp->end())
             {
                 struct BlockInfo *bio1 = it2->second;
@@ -174,8 +181,8 @@ public:
         if(flag)
         {
             bio1->TOT_pos = hour;
-            auto it = TOT->find(hour);
-            struct BlockInfo *bio = it->second;
+            unordered_map<long, struct TOTStruct *>::iterator it = TOT.find(hour);
+            struct BlockInfo *bio = it->second->head;
             if(bio1 != bio)
             {
                 bio1->next = bio;
@@ -185,7 +192,7 @@ public:
                     bio->pre = bio1;
                 }
             }
-            it->second = bio1;
+            it->second->head = bio1;
         }
         
     }
@@ -224,8 +231,9 @@ public:
     void rmExpiredData()
     {
         /*remove expired data*/
-        auto it = (*TOT).find(lasthour);
-        struct BlockInfo *bio = it->second;
+        unordered_map<long,struct TOTStruct *>::iterator it = TOT.find(lasthour);
+        struct TOTStruct *tts = it->second;
+        struct BlockInfo *bio = tts->head;
         struct BlockInfo *biotmp;
         while(bio != NULL)
         {
@@ -235,22 +243,26 @@ public:
             biotmp->pre = biotmp->next = NULL;
             biotmp->TOT_pos = -1;
         }
+        tts->head = NULL;
+        delete tts;
         it->second = NULL;
-        (*TOT).erase(it);
+        TOT.erase(it);
         lasthour++;
     }
 
     void addNewHour(long hour)
     {
-        (*TOT)[hour] = NULL;
+        struct TOTStruct *tts = new TOTStruct;
+        tts->head = NULL;
+        TOT[hour] = tts;
     }
 
     u_int64_t getToTSize()
     {
         u_int64_t result = 0;
-        for(auto it = (*TOT).begin() ; it != (*TOT).end() ; it++)
+        for(unordered_map<long, struct TOTStruct*>::iterator it = TOT.begin() ; it != TOT.end() ; it++)
         {
-            struct BlockInfo *bio = it->second;
+            struct BlockInfo *bio = it->second->head;
             while(bio != NULL)
             {
                 bio = bio->next;
@@ -263,8 +275,8 @@ public:
     u_int64_t getTOTSize(long time)
     {
         u_int64_t result = 0;
-        auto it = (*TOT).find(time);
-        struct BlockInfo *bio = it->second;
+        unordered_map<long, struct TOTStruct *>::iterator it = TOT.find(time);
+        struct BlockInfo *bio = it->second->head;
         while (bio != NULL)
         {
             bio = bio->next;
