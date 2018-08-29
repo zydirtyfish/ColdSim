@@ -11,8 +11,8 @@ using namespace std;
 #define BLOCKSIZE 2048 /*1MB, 2048sectors*/
 #endif
 
-#ifndef EXPIREDAY
-#define EXPIREDAY 7
+#ifndef EXPIREDHOUR
+#define EXPIREDHOUR 168 /*7 days*/
 #endif
 
 #ifndef STARTTIME
@@ -23,6 +23,7 @@ using namespace std;
 #define BLOCKINFO
 struct BlockInfo
 {
+    int type;                 /*类别，0为冷数据，1为热数据*/
     long TOT_pos;            /*在TOT中的位置*/
     long read_timestamp;
     long write_timestamp;
@@ -70,8 +71,7 @@ private:
     /*Index Map for TOT*/
     unordered_map<string, unordered_map<u_int64_t,long> *> *index_map;
 
-    long currentday;
-    long lastday;
+    long lasthour,hishour;
 
 public:
 
@@ -79,7 +79,7 @@ public:
     {
         unordered_map<long, struct BlockInfo *> *TOT = new unordered_map<long, struct BlockInfo *>();
         unordered_map<string, unordered_map<u_int64_t, struct BlockInfo *>* > *index_map = new unordered_map<string, unordered_map<u_int64_t, struct BlockInfo *> *>();
-        currentday = lastday = 0;
+        hishour = lasthour = 0;
     }
 
     long hasBlock(struct BlockStruct *bs)
@@ -164,18 +164,39 @@ public:
 
     bool isExpired(struct IoRecord *ir)
     {/*判断是否需要清理过期数据*/
-        long daydiff = (ir->alloc_time - lastday) / 86400;
-        if(daydiff > EXPIREDAY)
+        if (lasthour == 0)
         {
+            hishour = lasthour = (ir->alloc_time - STARTTIME) / 3600;
+            addNewHour(lasthour);
+            return false;
+        }
+
+        long currenthour = (ir->alloc_time - STARTTIME) / 3600;
+        long hourdiff = currenthour - lasthour;
+        if (hourdiff > EXPIREDHOUR)
+        {
+            rmExpiredData();
+            addNewHour(currenthour);
             return true;
         }
-        else return false;
+        else 
+        {
+            if(hourdiff < EXPIREDHOUR)
+            {
+                if(currenthour != hishour)
+                {
+                    addNewHour(currenthour);
+                    hishour = currenthour;
+                }
+            }
+            return false;
+        }
     }
 
     void rmExpiredData()
     {
         /*remove expired data*/
-        auto it = (*TOT).find(lastday);
+        auto it = (*TOT).find(lasthour);
         struct BlockInfo *bio = it->second;
         struct BlockInfo *biotmp;
         while(bio != NULL)
@@ -188,7 +209,12 @@ public:
         }
         it->second = NULL;
         (*TOT).erase(it);
-        lastday++;
+        lasthour++;
+    }
+
+    void addNewHour(long hour)
+    {
+
     }
 
     u_int64_t getToTSize()
@@ -218,7 +244,5 @@ public:
         }
         return result;
     }
-
-    
 };
 #endif
