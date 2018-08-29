@@ -6,8 +6,7 @@
         "-g",
         "${file}",
         "-o",
-        "${fileBasenameNoExtension}.out",
-        "-Wc++11-extensions"
+        "${fileBasenameNoExtension}.out"
     ],
     "showOutput": "always",
     "problemMatcher": {

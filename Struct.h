@@ -69,7 +69,7 @@ private:
     /*Time Oriented Table, i.e. TOT*/
     unordered_map<long,struct BlockInfo *> *TOT;
     /*Index Map for TOT*/
-    unordered_map<string, unordered_map<u_int64_t,long> *> *index_map;
+    unordered_map<string, unordered_map<u_int64_t,struct BlockInfo *> *> *index_map;
 
     long lasthour,hishour;
 
@@ -80,17 +80,6 @@ public:
         unordered_map<long, struct BlockInfo *> *TOT = new unordered_map<long, struct BlockInfo *>();
         unordered_map<string, unordered_map<u_int64_t, struct BlockInfo *>* > *index_map = new unordered_map<string, unordered_map<u_int64_t, struct BlockInfo *> *>();
         hishour = lasthour = 0;
-    }
-
-    long hasBlock(struct BlockStruct *bs)
-    {/*to judge whether the block is in the TOT*/ 
-        auto it = (*index_map).find(bs->disksn);
-        if(it != (*index_map).end())
-        {
-            unordered_map<u_int64_t,long> *tmp = &(it->second);
-            auto it2= (*tmp).find(bs->blockid);
-        }
-        return 0;
     }
 
     struct BlockStruct * ioToBlock(struct IoRecord *ir)
@@ -143,23 +132,62 @@ public:
     void updateTOT(struct BlockStruct *bs)
     {
         long hourtmp = hasBlock(bs);
-        if(hourtmp == 0)
-        {/*this block is not exist in the TOT*/
-            long hour = (bs->alloc_time - STARTTIME) / 3600;
-            BlockInfo *bio = new BlockInfo;
+        long hour = (bs->alloc_time - STARTTIME) / 3600;
 
+        auto it1 = index_map->find(bs->disksn);
+        struct BlockInfo *bio1 = NULL;
+        if (it1 != index_map->end())
+        {
+            unordered_map<u_int64_t, long> *tmp = it1->second;
+            auto it2 = tmp->find(bs->blockid);
+            if (it2 != tmp->end())
+            {
+                struct BlockInfo *bio1 = it2->second;
+            }
+        }
 
+        int flag = 0;
+        if(bio1 == NULL)
+        {
+            bio1 = new BlockInfo;
+            bio1->type = 1;
+            bio1->read_timestamp = bio1->write_timestamp = 0;
+            bio1->write_freq = bio1->writesize = bio1->read_freq = bio1->readsize = 0;
+            bio1->next = bio1->pre = NULL;
+            flag = 1;
+        }
+
+        if(bs->io_type == 0)
+        {
+            bio1->read_freq++;
+            bio1->readsize += bs->size;
+            bio1->read_timestamp = bs->alloc_time;
         }
         else
         {
+            bio1->write_freq++;
+            bio1->writesize += bs->io_type;
+            bio1->write_timestamp = bs->alloc_time;
+            flag = 1;
+        }
 
+        if(flag)
+        {
+            bio1->TOT_pos = hour;
+            auto it = TOT->find(hour);
+            struct BlockInfo *bio = it->second;
+            if(bio1 != bio)
+            {
+                bio1->next = bio;
+                bio1->pre = NULL;
+                if(bio != NULL)
+                {
+                    bio->pre = bio1;
+                }
+            }
+            it->second = bio1;
         }
         
-    }
-
-    void test()
-    {
-
     }
 
     bool isExpired(struct IoRecord *ir)
@@ -214,7 +242,7 @@ public:
 
     void addNewHour(long hour)
     {
-
+        (*TOT)[hour] = NULL;
     }
 
     u_int64_t getToTSize()

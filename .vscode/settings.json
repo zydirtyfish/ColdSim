@@ -1,6 +1,15 @@
 {
     "files.associations": {
         "__hash_table": "cpp",
-        "unordered_map": "cpp"
+        "unordered_map": "cpp",
+        "memory": "cpp",
+        "utility": "cpp",
+        "__bit_reference": "cpp",
+        "initializer_list": "cpp",
+        "iterator": "cpp",
+        "string": "cpp",
+        "string_view": "cpp",
+        "__string": "cpp",
+        "algorithm": "cpp"
     }
 }
