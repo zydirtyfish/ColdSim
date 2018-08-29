@@ -140,8 +140,7 @@ public:
     void updateTOT(struct BlockStruct *bs)
     {
         long hour = (bs->alloc_time - STARTTIME) / 3600;
-        string a = bs->disksn;
-        unordered_map<string,unordered_map<u_int64_t, struct BlockInfo*>*>::iterator it1 = index_map.find(a);
+        unordered_map<string, unordered_map<u_int64_t, struct BlockInfo *> *>::iterator it1 = index_map.find(bs->disksn);
         struct BlockInfo *bio1 = NULL;
         if (it1 != index_map.end())
         {
