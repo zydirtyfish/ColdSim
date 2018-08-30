@@ -40,6 +40,8 @@ class get_trace_tool
     void close_file(FILE *fp)
     {
         fclose(fp);
+        fp = NULL;
+        remove(filename);
     }
 
     //get next IoRecord

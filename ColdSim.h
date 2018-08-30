@@ -2,7 +2,7 @@
 #include <iostream>
 #include <stdlib.h>
 #include <math.h>
-#include <string.h>
+#include <string>
 #include <cstring>
 #include <unordered_map>
 #include <fstream>
