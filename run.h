@@ -55,6 +55,9 @@ private:
             }
             delete gtt;
 
+            cout << ms->getToTSize() << endl;
+            ms->getIndexMap();
+            
             if (i % 24 == 0)
             {
                 //output_info(io_log);
