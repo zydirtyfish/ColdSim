@@ -1,6 +1,7 @@
 #include <unordered_map>
-#include <string.h>
-#include <cstring>
+#include <string>
+#include <iostream>
+
 using namespace std;
 
 #ifndef MAXSCSI
@@ -77,7 +78,7 @@ private:
     /*Time Oriented Table, i.e. TOT*/
     unordered_map<long,struct TOTStruct *> TOT;
     /*Index Map for TOT*/
-    unordered_map<string, unordered_map<u_int64_t,struct BlockInfo *> *> index_map;
+    unordered_map<string, unordered_map<u_int64_t,struct BlockInfo *> > index_map;
 
     long lasthour,hishour;
 
@@ -86,7 +87,7 @@ public:
     MemStruct()
     {
         unordered_map<long, struct TOTStruct *> TOT = unordered_map<long, struct TOTStruct *>();
-        unordered_map<string, unordered_map<u_int64_t, struct BlockInfo *>* > index_map = unordered_map<string, unordered_map<u_int64_t, struct BlockInfo *> *>();
+        unordered_map<string, unordered_map<u_int64_t, struct BlockInfo *> > index_map = unordered_map<string, unordered_map<u_int64_t, struct BlockInfo *> >();
         hishour = lasthour = 0;
     }
 
@@ -140,18 +141,21 @@ public:
     void updateTOT(struct BlockStruct *bs)
     {
         long hour = (bs->alloc_time - STARTTIME) / 3600;
-        unordered_map<string, unordered_map<u_int64_t, struct BlockInfo *> *>::iterator it1 = index_map.find(bs->disksn);
+        unordered_map<string, unordered_map<u_int64_t, struct BlockInfo *> >::iterator it1 = index_map.find(bs->disksn);
         struct BlockInfo *bio1 = NULL;
+        unordered_map<u_int64_t, struct BlockInfo *> *tmp = NULL;
+        int flagtmp = 0;
         if (it1 != index_map.end())
         {
-            unordered_map<u_int64_t, struct BlockInfo *> *tmp = it1->second;
+            tmp = &(it1->second);
             unordered_map<u_int64_t, struct BlockInfo *>::iterator it2 = tmp->find(bs->blockid);
+            flagtmp = 1;
             if (it2 != tmp->end())
             {
-                struct BlockInfo *bio1 = it2->second;
+                bio1 = it2->second;
+                flagtmp = 2;
             }
         }
-
         int flag = 0;
         if(bio1 == NULL)
         {
@@ -172,28 +176,46 @@ public:
         else
         {
             bio1->write_freq++;
-            bio1->writesize += bs->io_type;
+            bio1->writesize += bs->size;
             bio1->write_timestamp = bs->alloc_time;
             flag = 1;
         }
 
-        if(flag)
+        if(flag == 1)
         {
+            if(bio1->pre != NULL)
+                bio1->pre = bio1->next;
+            if(bio1->next != NULL)
+                bio1->next->pre = bio1->pre;
+            
+            bio1->next = bio1->pre = NULL;
+
             bio1->TOT_pos = hour;
             unordered_map<long, struct TOTStruct *>::iterator it = TOT.find(hour);
             struct BlockInfo *bio = it->second->head;
-            if(bio1 != bio)
+            if(bio1 != bio->next)
             {
-                bio1->next = bio;
-                bio1->pre = NULL;
-                if(bio != NULL)
+                bio1->next = bio->next;
+                bio1->pre = bio;
+                if(bio->next != NULL)
                 {
-                    bio->pre = bio1;
+                    bio->next->pre = bio1;
                 }
             }
-            it->second->head = bio1;
+            bio->next = bio1;
         }
-        
+
+        //cout << flagtmp << endl;
+        if(flagtmp == 0)
+        {
+            unordered_map<u_int64_t, struct BlockInfo *> blockmap = unordered_map<u_int64_t,struct BlockInfo *>();
+            blockmap[bs->blockid] = bio1;
+            index_map[bs->disksn] = blockmap;
+        }
+        else if(flagtmp ==1)
+        {
+            (*tmp)[bs->blockid] = bio1;
+        }
     }
 
     bool isExpired(struct IoRecord *ir)
@@ -232,7 +254,8 @@ public:
         /*remove expired data*/
         unordered_map<long,struct TOTStruct *>::iterator it = TOT.find(lasthour);
         struct TOTStruct *tts = it->second;
-        struct BlockInfo *bio = tts->head;
+        struct BlockInfo *bio = tts->head->next;
+        
         struct BlockInfo *biotmp;
         while(bio != NULL)
         {
@@ -243,6 +266,7 @@ public:
             biotmp->TOT_pos = -1;
         }
         tts->head = NULL;
+        delete tts->head;
         delete tts;
         it->second = NULL;
         TOT.erase(it);
@@ -252,7 +276,9 @@ public:
     void addNewHour(long hour)
     {
         struct TOTStruct *tts = new TOTStruct;
-        tts->head = NULL;
+        struct BlockInfo *bio = new BlockInfo;
+        bio->pre = bio->next = NULL;
+        tts->head = bio;
         TOT[hour] = tts;
     }
 
@@ -261,7 +287,7 @@ public:
         u_int64_t result = 0;
         for(unordered_map<long, struct TOTStruct*>::iterator it = TOT.begin() ; it != TOT.end() ; it++)
         {
-            struct BlockInfo *bio = it->second->head;
+            struct BlockInfo *bio = it->second->head->next;
             while(bio != NULL)
             {
                 bio = bio->next;
@@ -275,13 +301,40 @@ public:
     {
         u_int64_t result = 0;
         unordered_map<long, struct TOTStruct *>::iterator it = TOT.find(time);
-        struct BlockInfo *bio = it->second->head;
+        struct BlockInfo *bio = it->second->head->next;
         while (bio != NULL)
         {
             bio = bio->next;
             result++;
         }
         return result;
+    }
+
+    void getTOTMap()
+    {
+        for (unordered_map<long, struct TOTStruct *>::iterator it = TOT.begin(); it != TOT.end(); it++)
+        {
+            struct BlockInfo *bio = it->second->head->next;
+            while (bio != NULL)
+            {
+                cout << bio->read_freq << "\t" << bio->write_freq << "\t" << bio->readsize << "\t" << bio->writesize << "\t" << bio->read_timestamp << "\t" << bio->write_timestamp << endl;
+                bio = bio->next;
+            }
+        }
+    }
+
+    void getIndexMap()
+    {
+        for(unordered_map<string, unordered_map<u_int64_t,struct BlockInfo *> > :: iterator it = index_map.begin() ; it != index_map.end() ; it++ )
+        {
+            unordered_map<u_int64_t,struct BlockInfo *> *blockmap = &(it->second);
+            for(unordered_map<u_int64_t,struct BlockInfo *>::iterator iter = (*blockmap).begin(); iter != (*blockmap).end() ; iter++)
+            {
+                struct BlockInfo *bio = iter->second;
+                cout << it->first << "\t" << iter->first << "\t" << bio->read_freq << "\t" << bio->write_freq << "\t" << bio->readsize << "\t" << bio->writesize << "\t" << bio->read_timestamp << "\t" << bio->write_timestamp << endl;
+            }
+
+        }
     }
 };
 #endif

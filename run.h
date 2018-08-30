@@ -60,13 +60,8 @@ private:
                 //output_info(io_log);
             }
         }
-        /*ior = new IoRecord;
-        ior->alloc_time = 1514746000;
-        strcpy(ior->disksn, "12312aaaa");
-        ior->offset = 33435564;
-        ior->size = 16;
-        ior->io_type = 1;
-        process(ior);*/
+        
+        //test();
     }
 
     void process(struct IoRecord *ior)
@@ -151,4 +146,36 @@ private:
         return result;
     }
 
+    void test()
+    {
+        ior = new IoRecord;
+        ior->alloc_time = 1514746000;
+        strcpy(ior->disksn, "12312aaaa");
+        ior->offset = 33435564;
+        ior->size = 16;
+        ior->io_type = 1;
+        process(ior);
+        //cout << ms->getToTSize() << endl;
+        //ms->getTOTMap();
+
+        ior = new IoRecord;
+        ior->alloc_time = 1514746000;
+        strcpy(ior->disksn, "12312aaaaAA");
+        ior->offset = 133435564;
+        ior->size = 16;
+        ior->io_type = 0;
+        process(ior);
+        //cout << ms->getToTSize() << endl;
+        //ms->getTOTMap();
+
+        ior = new IoRecord;
+        ior->alloc_time = 1514746000;
+        strcpy(ior->disksn, "12312aaaa");
+        ior->offset = 33435564;
+        ior->size = 16;
+        ior->io_type = 0;
+        process(ior);
+        cout << ms->getToTSize() << endl;
+        ms->getIndexMap();
+    }
 };
