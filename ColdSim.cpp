@@ -1,5 +1,4 @@
-#include "ColdSim.h"
-#include "Struct.h"
+#include "run.h"
 
 int main(int argc, char *argv[])
 {
@@ -18,7 +17,7 @@ int main(int argc, char *argv[])
     while(bs != NULL)
     {
         ms->updateTOT(bs);
-        bs = bs->next;   
+        bs = bs->next;
     }
     ms->freeBlockList(bshead);
     

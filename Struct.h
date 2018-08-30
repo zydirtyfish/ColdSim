@@ -96,7 +96,7 @@ public:
 
         u_int64_t start = ir->offset / BLOCKSIZE;
 
-        bstmp = (struct BlockStruct *)sizeof(struct BlockStruct);
+        bstmp = new BlockStruct;
         bstmp->blockid = start;
         bstmp->alloc_time = ir->alloc_time;
         bstmp->io_type = ir->io_type;
@@ -132,7 +132,7 @@ public:
         while(tmp != NULL)
         {
             head = tmp->next;
-            free(tmp);
+            delete tmp;
             tmp = head;
         }
     }

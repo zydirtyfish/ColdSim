@@ -5,6 +5,7 @@
 #include <string.h>
 #include <cstring>
 #include <unordered_map>
+#include <fstream>
 #include "Struct.h"
 
 
