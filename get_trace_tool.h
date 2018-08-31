@@ -66,7 +66,6 @@ class get_trace_tool
         {
             get_progress_ratio();
         }
-        cout << curr_rec << endl;
     }
 
     u_int64_t get_rec_cnt()

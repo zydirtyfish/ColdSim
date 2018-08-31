@@ -12,7 +12,7 @@ private:
     char logdir[200];
 
   public:
-    RUN(char *logd)
+    RUN(const char *logd)
     {
         LogClear();
         ms = new MemStruct();
@@ -25,7 +25,7 @@ private:
         ms = NULL;
     }
 
-    void exec(char *depotid)
+    void exec(const char *depotid)
     {
         char ds1[40];
         char ds2[40];
@@ -113,7 +113,7 @@ private:
         return ds1;
     }
 
-    long get_data(char *ds1, char *ds2, char *para1)
+    long get_data(char *ds1, char *ds2, const char *para1)
     {
         char cmd_sh[200];
         strcpy(cmd_sh, "sh get_data.sh ");
