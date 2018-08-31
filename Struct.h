@@ -114,7 +114,7 @@ public:
 
         for(u_int64_t i = start+1 ; i <= end; i++)
         {
-            bstmp = (struct BlockStruct *)sizeof(struct BlockStruct);
+            bstmp = new BlockStruct;
             bstmp->blockid = i;
             bstmp->alloc_time = ir->alloc_time;
             bstmp->io_type = ir->io_type;

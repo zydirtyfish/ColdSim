@@ -9,12 +9,14 @@ private:
     get_trace_tool *gtt;
     struct IoRecord *ior;
     MemStruct *ms;
+    char logdir[200];
 
   public:
-    RUN()
+    RUN(char *logd)
     {
         LogClear();
         ms = new MemStruct();
+        strcpy(logdir,logd);
     }
 
     ~RUN()
@@ -30,12 +32,13 @@ private:
         char logfile[200];
         long time_stamp = get_today();
 
-        for (int i = 0; i < 2160; i++)
+        for (int i = 0; i < 1; i++)
         {
             get_ds1(ds1, time_stamp, i * 3600);
             get_ds2(ds2, time_stamp, i * 3600);
             long row_cnt = get_data(ds1, ds2, depotid);
-            strcpy(logfile, "/data0/app/hivelog/");
+            //strcpy(logfile, "/data0/app/hivelog/");
+            strcpy(logfile, logdir);
             strcat(logfile, depotid);
             strcat(logfile, "/");
             strcat(logfile, ds2);
@@ -57,7 +60,7 @@ private:
 
             cout << ms->getToTSize() << endl;
             ms->getIndexMap();
-            
+
             if (i % 24 == 0)
             {
                 //output_info(io_log);
@@ -120,9 +123,9 @@ private:
         strcat(cmd_sh, "' ");
         strcat(cmd_sh, ds2);
         cout << cmd_sh << endl;
-        system(cmd_sh);
+        //system(cmd_sh);
 
-        strcpy(cmd_sh, "/data0/app/hivelog/");
+        strcpy(cmd_sh, logdir);
         strcat(cmd_sh, para1);
         strcat(cmd_sh, "/");
         strcat(cmd_sh, ds2);
@@ -134,7 +137,8 @@ private:
         }
         fclose(fh);
 
-        strcpy(cmd_sh, "wc -l /data0/app/hivelog/");
+        strcpy(cmd_sh, "wc -l ");
+        strcat(cmd_sh,logdir);
         strcat(cmd_sh, para1);
         strcat(cmd_sh, "/");
         strcat(cmd_sh, ds2);
