@@ -184,7 +184,7 @@ public:
         if(flag == 1)
         {
             if(bio1->pre != NULL)
-                bio1->pre = bio1->next;
+                bio1->pre->next = bio1->next;
             if(bio1->next != NULL)
                 bio1->next->pre = bio1->pre;
             
@@ -288,8 +288,10 @@ public:
         for(unordered_map<long, struct TOTStruct*>::iterator it = TOT.begin() ; it != TOT.end() ; it++)
         {
             struct BlockInfo *bio = it->second->head->next;
+           
             while(bio != NULL)
             {
+                //cout << bio->read_freq << endl;
                 bio = bio->next;
                 result++;
             }
